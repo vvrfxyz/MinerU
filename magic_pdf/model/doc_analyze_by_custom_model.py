@@ -182,7 +182,7 @@ def custom_model_init(
 def doc_analyze(
     dataset: Dataset,  # 输入的 Dataset 对象，包含文档信息
     ocr: bool = False,  # 是否对整个文档强制使用OCR，默认为False
-    show_log: bool = False,  # 是否显示详细日志，默认为False
+    show_log: bool = True,  # 是否显示详细日志，默认为False
     start_page_id=0,  # 要分析的起始页面索引（从0开始），默认为0
     end_page_id=None,  # 要分析的结束页面索引（包含），None表示到最后一页，默认为None
     lang=None,  # 指定语言，None表示自动检测或使用默认

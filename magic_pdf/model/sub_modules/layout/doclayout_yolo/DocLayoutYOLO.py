@@ -29,7 +29,7 @@ class DocLayoutYOLOModel(object):
             imgsz=1280, # 推理图像大小设置为1280
             conf=0.10, # 置信度阈值设为0.10
             iou=0.45, # NMS的IoU阈值设为0.45
-            verbose=False, # 不打印详细日志
+            verbose=True, # 不打印详细日志
             device=self.device # 指定运行设备
         )[0] # 获取第一个结果，因为是单张图片预测
 
@@ -78,7 +78,7 @@ class DocLayoutYOLOModel(object):
                     imgsz=1280, # 推理图像大小
                     conf=0.10, # 置信度阈值
                     iou=0.45, # IoU 阈值
-                    verbose=False, # 关闭详细输出
+                    verbose=True, # 关闭详细输出
                     device=self.device, # 指定运行设备
                 )
             ]

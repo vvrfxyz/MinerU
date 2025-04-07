@@ -67,7 +67,7 @@ class CustomPEKModel:
             'mfr_model', MODEL_NAME.UniMerNet_v2_Small
         )
         # 是否启用公式处理，默认为 True
-        self.apply_formula = self.formula_config.get('enable', True)
+        self.apply_formula = False
 
         # --- 表格 (Table) 配置 ---
         # 从 kwargs 获取表格配置
