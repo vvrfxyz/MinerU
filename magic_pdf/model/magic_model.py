@@ -814,11 +814,11 @@ class MagicModel:
     def get_imgs_v2(self, page_no: int):
         # 使用 v3 方法关联图片(主体ID=3)和图片标题(客体ID=4)，优先方向设为下方(BOTTOM) - v3未使用此参数
         with_captions = self.__tie_up_category_by_distance_v3(
-            page_no, CategoryId.Image, CategoryId.ImageCaption, PosRelationEnum.BOTTOM
+            page_no, CategoryId.ImageBody, CategoryId.ImageCaption, PosRelationEnum.BOTTOM
         )
         # 使用 v3 方法关联图片(主体ID=3)和图片脚注(客体ID=ImageFootnote)，优先方向设为所有(ALL) - v3未使用此参数
         with_footnotes = self.__tie_up_category_by_distance_v3(
-            page_no, CategoryId.Image, CategoryId.ImageFootnote, PosRelationEnum.ALL
+            page_no, CategoryId.ImageBody, CategoryId.ImageFootnote, PosRelationEnum.ALL
         )
 
         # 合并标题和脚注结果
@@ -862,11 +862,11 @@ class MagicModel:
     def get_tables_v2(self, page_no: int) -> list:
         # 使用 v3 方法关联表格(主体ID=5)和表格标题(客体ID=6)，优先方向设为上方(UP) - v3未使用此参数
         with_captions = self.__tie_up_category_by_distance_v3(
-            page_no, CategoryId.Table, CategoryId.TableCaption, PosRelationEnum.UP
+            page_no, CategoryId.TableBody, CategoryId.TableCaption, PosRelationEnum.UP
         )
         # 使用 v3 方法关联表格(主体ID=5)和表格脚注(客体ID=7)，优先方向设为所有(ALL) - v3未使用此参数
         with_footnotes = self.__tie_up_category_by_distance_v3(
-            page_no, CategoryId.Table, CategoryId.TableFootnote, PosRelationEnum.ALL
+            page_no, CategoryId.TableBody, CategoryId.TableFootnote, PosRelationEnum.ALL
         )
 
         # 合并标题和脚注结果 (逻辑同 get_imgs_v2)
@@ -993,10 +993,10 @@ class MagicModel:
 
         # 定义允许被视为span的类别ID列表
         allow_category_id_list = [
-            CategoryId.Image,  # 3: 图片
-            CategoryId.Table,  # 5: 表格
+            CategoryId.ImageBody,  # 3: 图片
+            CategoryId.TableBody,  # 5: 表格
             CategoryId.InlineEquation,  # 13: 行内公式
-            CategoryId.InterlineEquation,  # 14: 行间公式
+            CategoryId.InterlineEquation_YOLO,  # 14: 行间公式
             CategoryId.Text,  # 15: OCR识别文本 (注意: 这里用整数15，前面get_ocr_text用字符串'15')
         ]
         """当成span拼接的类别ID"""
@@ -1015,9 +1015,9 @@ class MagicModel:
                 # 构建基础span字典，包含bbox和score
                 span = {'bbox': layout_det['bbox'], 'score': layout_det['score']}
                 # 根据不同的类别ID，添加额外信息和类型
-                if category_id == CategoryId.Image:  # 图片
+                if category_id == CategoryId.ImageBody:  # 图片
                     span['type'] = ContentType.Image
-                elif category_id == CategoryId.Table:  # 表格
+                elif category_id == CategoryId.TableBody:  # 表格
                     # 尝试获取表格的latex或html表示
                     latex = layout_det.get('latex', None)
                     html = layout_det.get('html', None)
@@ -1029,7 +1029,7 @@ class MagicModel:
                 elif category_id == CategoryId.InlineEquation:  # 行内公式
                     span['content'] = layout_det.get('latex', '')  # 获取latex内容
                     span['type'] = ContentType.InlineEquation
-                elif category_id == CategoryId.InterlineEquation:  # 行间公式
+                elif category_id == CategoryId.InterlineEquation_YOLO:  # 行间公式
                     span['content'] = layout_det.get('latex', '')  # 获取latex内容
                     span['type'] = ContentType.InterlineEquation
                 elif category_id == CategoryId.Text:  # OCR文本
