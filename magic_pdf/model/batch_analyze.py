@@ -3,6 +3,7 @@
 import time
 # 导入OpenCV库，用于图像处理
 import cv2
+import os
 # 导入loguru库，用于日志记录
 from loguru import logger
 # 导入tqdm库，用于显示进度条
@@ -48,6 +49,17 @@ class BatchAnalyze:
         if len(images_with_extra_info) == 0:
             return []
         
+        # --- 开始：图片切片功能新增 ---
+        output_dir = "/data/MinerU/output/cut/"
+        try:
+            os.makedirs(output_dir, exist_ok=True)
+            # print(f"创建或确认输出目录: {output_dir}") # 用于调试
+        except OSError as e:
+            print(f"错误：无法创建目录 {output_dir}: {e}")
+            # 根据需要决定是抛出异常还是继续但不保存切片
+            output_dir = None # 设置为None，后续跳过保存步骤
+        # --- 结束：图片切片功能新增 ---
+
         # 初始化存储布局结果的列表
         images_layout_res = []
         # 记录布局分析开始时间
@@ -344,5 +356,92 @@ class BatchAnalyze:
             # 记录OCR识别耗时和总处理数量 (注释掉的代码)
             # logger.info(f'ocr-rec time: {round(rec_time, 2)}, total images processed: {total_processed}')
             
+        # --- 开始：图片切片保存 ---
+        if output_dir: # 仅在目录创建成功时执行
+            print(f"开始保存切片到 {output_dir}...") # 用于调试
+            slice_count = 0
+            for image_idx, layout_res in enumerate(images_layout_res):
+                original_image = images[image_idx] # 获取对应的原始图像 (NumPy Array)
+                # 检查原始图像是否有效
+                if original_image is None or original_image.size == 0:
+                    print(f"警告：跳过图像 {image_idx} 的切片，因为原始图像无效。")
+                    continue
+
+                image_height, image_width = original_image.shape[:2]
+
+                for item_idx, item in enumerate(layout_res):
+                    # 检查 'poly' 键是否存在且不为 None
+                    if 'poly' in item and item['poly'] is not None:
+                        try:
+                            poly = item['poly']
+                            # 确保 poly 是一个列表并且包含足够的元素来提取坐标
+                            # (至少需要索引 0, 1, 4, 5，所以长度至少为6)
+                            if isinstance(poly, list) and len(poly) >= 6:
+                                # 从 'poly' 列表中提取边界框坐标
+                                # poly format: [xmin, ymin, xmax, ymin, xmax, ymax, xmin, ymax]
+                                x1 = int(poly[0])  # xmin
+                                y1 = int(poly[1])  # ymin
+                                x2 = int(poly[4])  # xmax (from bottom-right or top-right corner)
+                                y2 = int(poly[5])  # ymax (from bottom-right corner)
+                            else:
+                                print(f"警告：跳过图像 {image_idx} 项目 {item_idx} - 'poly' 格式无效或长度不足: {poly}")
+                                continue # 跳过这个无效的项目
+
+                            # --- 后续代码基本保持不变 ---
+
+                            # 边界检查和修正 (防止坐标超出图像范围)
+                            # !! 确保 image_width 和 image_height 在这里是有效的 !!
+                            # !! 如果它们是在循环外定义的，确保它们对应当前的 original_image !!
+                            # image_height, image_width = original_image.shape[:2] # <--- 可能需要在这里或循环开始处获取当前图像尺寸
+
+                            x1 = max(0, x1)
+                            y1 = max(0, y1)
+                            x2 = min(image_width, x2)
+                            y2 = min(image_height, y2)
+
+                            # 检查修正后的框是否有效 (宽度和高度大于0)
+                            if x1 >= x2 or y1 >= y2:
+                                # print(f"警告：跳过图像 {image_idx} 项目 {item_idx} 的无效边界框 (修正后): [{x1},{y1},{x2},{y2}], 原始poly: {poly}")
+                                continue # 跳过无效或零尺寸的框
+
+                            # 裁剪图像
+                            # NumPy 索引是 [y1:y2, x1:x2]
+                            slice_img = original_image[y1:y2, x1:x2]
+
+                            # 检查裁剪结果是否为空
+                            if slice_img is None or slice_img.size == 0:
+                                # print(f"警告：图像 {image_idx} 项目 {item_idx} 裁剪结果为空, 原始poly: {poly}, 修正后: [{x1},{y1},{x2},{y2}]")
+                                continue
+
+                            # 构建文件名
+                            category_id = item.get('category_id', 'unknown')
+                            filename = f"image_{image_idx}_item_{item_idx}_catid_{category_id}.png"
+                            output_path = os.path.join(output_dir, filename)
+
+                            # 保存图像
+                            # 假设 original_image 是 RGB 格式，转换为 BGR 进行保存
+                            # 如果 original_image 已经是 BGR，则移除 cvtColor
+                            save_success = cv2.imwrite(output_path, cv2.cvtColor(slice_img, cv2.COLOR_RGB2BGR))
+                            # save_success = cv2.imwrite(output_path, slice_img) # 如果原始图像是BGR
+
+                            if not save_success:
+                                print(f"错误：无法将切片保存到 {output_path}")
+                            else:
+                                slice_count += 1
+                                # print(f"成功保存切片: {output_path}") # 用于详细调试
+
+                        except (ValueError, TypeError) as ve:
+                            print(f"错误：处理图像 {image_idx} 项目 {item_idx} 时坐标转换失败: {ve}")
+                            print(f"  项目数据: {item}")
+                        except Exception as e:
+                            print(f"错误：处理图像 {image_idx} 项目 {item_idx} 时发生意外异常: {e}")
+                            print(f"  项目数据: {item}")
+                    # else: # 可以选择性地记录那些没有 'poly' 键的项目用于调试
+                    #     print(f"信息：跳过图像 {image_idx} 项目 {item_idx}，无 'poly' 键。 Item: {item}")
+
+
+            print(f"完成切片保存，共保存 {slice_count} 个切片。") # 用于调试
+        # --- 结束：图片切片保存 ---
+        logger.info(f'images_layout_res: {images_layout_res}')
         # 返回包含所有分析结果（布局、公式、表格、OCR文本）的列表
         return images_layout_res

@@ -10,7 +10,7 @@ from magic_pdf.config.enums import SupportedPdfParseMethod
 start_time = time.time()
 
 # args
-pdf_file_name = "PMC11740008.pdf"  # replace with the real pdf path
+pdf_file_name = "PMC11742413_pages_1-3.pdf"  # replace with the real pdf path
 name_without_suff = pdf_file_name.split(".")[0]
 
 # prepare env
@@ -28,17 +28,17 @@ pdf_bytes = reader1.read(pdf_file_name)  # read the pdf content
 
 ds = PymuDocDataset(pdf_bytes)
 # inference
-if ds.classify() == SupportedPdfParseMethod.OCR:
-    infer_result = ds.apply(doc_analyze, ocr=True)
+# if ds.classify() == SupportedPdfParseMethod.OCR:
+infer_result = ds.apply(doc_analyze, ocr=True)
 
     ## pipeline
-    pipe_result = infer_result.pipe_ocr_mode(image_writer)
+pipe_result = infer_result.pipe_ocr_mode(image_writer)
 
-else:
-    infer_result = ds.apply(doc_analyze, ocr=False)
+# else:
+#     infer_result = ds.apply(doc_analyze, ocr=False)
 
     ## pipeline
-    pipe_result = infer_result.pipe_txt_mode(image_writer)
+    # pipe_result = infer_result.pipe_txt_mode(image_writer)
 pipe_result.draw_layout(os.path.join(local_md_dir, f"{name_without_suff}_layout.pdf"))
 ### draw model result on each page
 infer_result.draw_model(os.path.join(local_md_dir, f"{name_without_suff}_model.pdf"))
